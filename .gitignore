@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+dist-win/
+dist-mac/
+overrides/mods/*.jar
+overrides/servers.dat
+*.muse-github-snapshot-sync.json
+*.muse-github-snapshot-sync.json.tmp-*

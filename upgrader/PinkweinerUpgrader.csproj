@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>PinkweinerUpgrader</AssemblyName>
+    <RootNamespace>PinkweinerUpgrader</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- No external NuGet packages: System.Text.Json + System.Net.Http only. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Embedded verbatim: the 26.3 + Fabric Loader 0.20.1 pack definition. -->
+    <EmbeddedResource Include="../mmc-pack.json" LogicalName="mmc-pack.json" />
+    <!-- Embedded: Pinkweiner server list, written only on fresh installs.
+         Optional: the file is not in the public repo (it holds the server
+         address), so the build skips it when absent. -->
+    <EmbeddedResource Include="../overrides/servers.dat" LogicalName="servers.dat" Condition="Exists('../overrides/servers.dat')" />
+    <!-- Embedded: the 113-mod download manifest (overridable via a flag). -->
+    <EmbeddedResource Include="../tool-manifest.json" LogicalName="tool-manifest.json" />
+    <!-- Embedded: the 11 jars not on Modrinth (9 custom mods + 2 patched jars). -->
+    <EmbeddedResource Include="../overrides/mods/*.jar" LogicalName="mods/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
