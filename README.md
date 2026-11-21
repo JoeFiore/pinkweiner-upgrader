@@ -28,7 +28,7 @@ The output is a single self-contained executable (~19 MB). No external NuGet pac
 
 Two things are deliberately left out of the public repo:
 
-- **`overrides/mods/*.jar`** — the 11 jars that aren't on Modrinth: the 9 custom Pinkweiner mods plus the patched ShoulderSurfing and Light Level Overlay jars. Drop them into `overrides/mods/` before building and they get embedded automatically. Without them the tool still builds and runs, but the new instance will be missing those 11 mods.
+- **`overrides/mods/*.jar`** — the 10 jars that aren't on Modrinth: the 8 custom Pinkweiner mods plus the patched ShoulderSurfing and Light Level Overlay jars. Drop them into `overrides/mods/` before building and they get embedded automatically. Without them the tool still builds and runs, but the new instance will be missing those 10 mods.
 - **`overrides/servers.dat`** — the Pinkweiner server list, written into fresh installs only. Copy it from any 26.3NEW instance's `minecraft/servers.dat` into `overrides/` before building. Without it the build still succeeds; fresh installs just don't get a pre-added server.
 
 ## Layout
