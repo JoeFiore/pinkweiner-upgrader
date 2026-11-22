@@ -1,0 +1,21 @@
+Files to attach to the v2 release of JoeFiore/pinkweiner-upgrader
+=================================================================
+
+Override jars (from mc263-upgrade/overrides/mods/):
+  ShoulderSurfing-Fabric-26.3-5.3.1-patched2.jar
+  concretepalette-1.0.0-26.3.jar
+  daybreak-1.0.2-26.3.jar
+  fabric-1.0.0-26.3-patched.jar
+  logstripper-1.0.5-26.3.jar
+  modlink-1.0.5-26.3.jar
+  pulseai-1.0-26.3.jar
+  speedupgrade-1.0.3-26.3.jar
+  tunebridge-fabric-1.0.0-26.3.jar
+  waypointsync-1.0.4-26.3.jar
+
+Still to come (do NOT create the release until these exist):
+  golden-crops-1.0.0.jar  (exact filename TBD — the Golden Crops
+                           builder agent will confirm it)
+  Pinkweiner.Upgrader.for.Windows.exe  (built from the v2 source)
+  Pinkweiner.Upgrader.for.Mac.zip.with.launcher.zip
+                           (v2 Mac binary + Pinkweiner-Upgrader.command)

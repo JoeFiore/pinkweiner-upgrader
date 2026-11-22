@@ -19,16 +19,16 @@
    "url": "https://cdn.modrinth.com/data/MjVuY1gY/versions/go7q6Jf8/afk-cinematics-2.11.26%2Bmc26.3.jar"
   },
   {
-   "filename": "AmbientEnvironment-fabric-26.3-26.3.2.jar",
-   "sha1": "b82478332bb1898d8d83d0d77bc60f08e3f2f396",
-   "size": 52100,
-   "url": "https://cdn.modrinth.com/data/DyTvM1dv/versions/8nLEdSG0/AmbientEnvironment-fabric-26.3-26.3.2.jar"
-  },
-  {
    "filename": "ambient_creatures-0.3.0-beta-26.3.jar",
    "sha1": "896f7847d41299c1f8db7cab3ef03022f4b70cf9",
    "size": 888340,
    "url": "https://cdn.modrinth.com/data/egUSQYsJ/versions/sJb88U80/ambient_creatures-0.3.0-beta-26.3.jar"
+  },
+  {
+   "filename": "AmbientEnvironment-fabric-26.3-26.3.2.jar",
+   "sha1": "b82478332bb1898d8d83d0d77bc60f08e3f2f396",
+   "size": 52100,
+   "url": "https://cdn.modrinth.com/data/DyTvM1dv/versions/8nLEdSG0/AmbientEnvironment-fabric-26.3-26.3.2.jar"
   },
   {
    "filename": "appleskin-fabric-mc26.3-3.0.10.jar",
@@ -301,6 +301,12 @@
    "url": "https://cdn.modrinth.com/data/8BmcQJ2H/versions/kSxHvs99/geckolib-fabric-26.3-5.5.7.jar"
   },
   {
+   "filename": "GoldenAppleTree-1.2.6-26.3-Fabric.jar",
+   "sha1": "fa148117f9f67c93d6f101c91c9ae62bd268f955",
+   "size": 429587,
+   "url": "https://cdn.modrinth.com/data/TevJ7APg/versions/kzZH4tTe/GoldenAppleTree-1.2.6-26.3-Fabric.jar"
+  },
+  {
    "filename": "gui-time-2.2.0.jar",
    "sha1": "e87b2346f9914cc65a646f61fabcf0fd72d2a598",
    "size": 47101,
@@ -553,16 +559,16 @@
    "url": "https://cdn.modrinth.com/data/yXAvIk0x/versions/aXAUZoEb/scribble-2.1.0%2Bmc26.3.jar"
   },
   {
-   "filename": "SimpleDiscordRichPresence-fabric-26.3.0.1.jar",
-   "sha1": "d38c7f698b3e6a03d6acd8e2f00106e386665cd1",
-   "size": 76802,
-   "url": "https://cdn.modrinth.com/data/SCAopByd/versions/ISbVI4V2/SimpleDiscordRichPresence-fabric-26.3.0.1.jar"
-  },
-  {
    "filename": "simple_music_control-fabric-1.5.6+26.3.jar",
    "sha1": "ee0e2631cdf173bcdbd2e40f7fad6b7cce3b05cd",
    "size": 252106,
    "url": "https://cdn.modrinth.com/data/8AX2hHnX/versions/3sI4gTvx/simple_music_control-fabric-1.5.6%2B26.3.jar"
+  },
+  {
+   "filename": "SimpleDiscordRichPresence-fabric-26.3.0.1.jar",
+   "sha1": "d38c7f698b3e6a03d6acd8e2f00106e386665cd1",
+   "size": 76802,
+   "url": "https://cdn.modrinth.com/data/SCAopByd/versions/ISbVI4V2/SimpleDiscordRichPresence-fabric-26.3.0.1.jar"
   },
   {
    "filename": "skinlayers3d-fabric-1.11.4-mc26.3.jar",

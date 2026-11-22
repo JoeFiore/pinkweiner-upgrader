@@ -1,11 +1,20 @@
 // Pinkweiner 26.3 Upgrader
-// Upgrades a friend's Prism Launcher Minecraft instance from 26.2 to 26.3,
-// keeping their configs, resource packs, and settings. The old instance is
-// never modified -- everything is read from it and written to a new instance.
+// Two jobs in one tool:
+//   1. Upgrade: creates a new Prism Launcher instance for Minecraft 26.3 from
+//      a 26.2 instance (or a fresh install), keeping configs and packs.
+//   2. Sync: one-click mod update for an existing 26.3 instance. Fetches the
+//      pack manifest from the repo, downloads new/changed mods, and removes
+//      managed mods that left the pack. Mods the player added themselves are
+//      never touched.
 //
 // Usage: run with no arguments and answer the prompts.
-//   --prism-dir <path>   Use a different Prism Launcher data folder.
-//   --manifest <path>    Use a different mod manifest (testing).
+//   --sync                 Go straight to mod sync (skip the mode menu).
+//   --upgrade              Go straight to the 26.2 -> 26.3 upgrade.
+//   --prism-dir <path>     Use a different Prism Launcher data folder.
+//   --manifest <path>      Use a local mod manifest file instead of the
+//                          built-in one (upgrade) or the online one (sync).
+//   --manifest-url <url>   Sync only: fetch the pack manifest from this URL
+//                          instead of the repo (testing).
 
 using System.Diagnostics;
 using System.Reflection;
@@ -17,16 +26,32 @@ namespace PinkweinerUpgrader;
 
 internal static class Program
 {
+    private const string ToolVersion = "1.1.0";
     private const string DefaultNewName = "26.3NEW";
     private const string DefaultSourceName = "26.2NEW";
     private const int MaxConcurrentDownloads = 8;
     private const int MaxDownloadAttempts = 3;
     private const string ShoulderSurfingJar = "ShoulderSurfing-Fabric-26.3-5.3.1-patched2.jar";
 
+    // The pack manifest lives in the public repo, so updating the pack is a
+    // commit -- no new release and no new upgrader download needed. Players
+    // just re-run the upgrader and pick Sync.
+    private const string SyncManifestUrl =
+        "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/mods-manifest.json";
+
+    // Written into the instance's minecraft/ folder (never inside mods/).
+    // Records which jars the upgrader manages, so sync only ever deletes
+    // jars it installed -- never mods the player added themselves.
+    private const string StateFileName = "pinkweiner-managed.json";
+
     private static readonly HttpClient Http = CreateHttpClient();
     private static readonly object ConsoleLock = new();
 
-    private sealed record ModEntry(string Filename, string Sha1, long Size, string Url);
+    private sealed record ModEntry(string Filename, string Sha1, long Size, string Url, string? Sha512);
+
+    private sealed record PackManifest(
+        string PackVersion, string Minecraft, string Loader,
+        List<ModEntry> Files, List<string> PlaceholderNotes);
 
     // Thrown when the user quits at a prompt (or stdin ends). Unwinds cleanly.
     private sealed class QuitException : Exception;
@@ -61,7 +86,7 @@ internal static class Program
     private static HttpClient CreateHttpClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Pinkweiner-Upgrader/1.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Pinkweiner-Upgrader/" + ToolVersion);
         return client;
     }
 
@@ -69,13 +94,11 @@ internal static class Program
     {
         string? prismDirArg = GetArg(args, "--prism-dir");
         string? manifestArg = GetArg(args, "--manifest");
+        string? manifestUrlArg = GetArg(args, "--manifest-url");
 
         Console.WriteLine("========================================");
-        Console.WriteLine("  Pinkweiner 26.3 Upgrader");
+        Console.WriteLine($"  Pinkweiner 26.3 Upgrader  (v{ToolVersion})");
         Console.WriteLine("========================================");
-        Console.WriteLine("Upgrades a Prism Launcher instance from Minecraft 26.2 to 26.3,");
-        Console.WriteLine("keeping your configs, resource packs, and settings.");
-        Console.WriteLine("Your old instance is never touched -- a new one is created.");
         Console.WriteLine();
 
         // 1. Find Prism's data dir.
@@ -86,7 +109,68 @@ internal static class Program
         }
         string instancesDir = Path.Combine(prismDir, "instances");
 
-        // 2. Pick the source instance (or fresh install).
+        // 2. Pick a mode: upgrade (first-time setup) or sync (update mods).
+        bool syncMode = SelectMode(args, instancesDir);
+        if (syncMode)
+        {
+            return await RunSyncAsync(instancesDir, manifestArg, manifestUrlArg);
+        }
+        return await RunUpgradeAsync(args, instancesDir, manifestArg);
+    }
+
+    private static bool SelectMode(string[] args, string instancesDir)
+    {
+        if (HasFlag(args, "--sync"))
+        {
+            return true;
+        }
+        if (HasFlag(args, "--upgrade"))
+        {
+            return false;
+        }
+
+        bool has263 = ListInstances(instancesDir).Any(name =>
+            ReadInstanceVersions(Path.Combine(instancesDir, name)).Minecraft == "26.3");
+
+        Console.WriteLine("What do you want to do?");
+        Console.WriteLine("  1. Set up a 26.3 instance (first time: upgrade from 26.2, or fresh install)");
+        Console.WriteLine("  2. Update the mods in my 26.3 instance (one-click sync)");
+        Console.WriteLine();
+        Console.WriteLine("Sync checks the pack for new or changed mods and installs them.");
+        Console.WriteLine("Run it whenever Joseph says the pack updated.");
+        Console.WriteLine();
+        int defaultChoice = has263 ? 2 : 1;
+        while (true)
+        {
+            Console.Write($"Enter 1 or 2 [default {defaultChoice}]: ");
+            string? input = Console.ReadLine() ?? throw new QuitException();
+            input = input.Trim();
+            if (input.Length == 0)
+            {
+                return defaultChoice == 2;
+            }
+            if (input == "1")
+            {
+                return false;
+            }
+            if (input == "2")
+            {
+                return true;
+            }
+            Console.WriteLine("Please enter 1 or 2.");
+        }
+    }
+
+    // ================= upgrade (first-time setup) =================
+
+    private static async Task<int> RunUpgradeAsync(string[] args, string instancesDir, string? manifestArg)
+    {
+        Console.WriteLine("Upgrades a Prism Launcher instance from Minecraft 26.2 to 26.3,");
+        Console.WriteLine("keeping your configs, resource packs, and settings.");
+        Console.WriteLine("Your old instance is never touched -- a new one is created.");
+        Console.WriteLine();
+
+        // 1. Pick the source instance (or fresh install).
         string? sourceName = SelectSource(instancesDir);
         bool fresh = sourceName is null;
         string? oldInstanceDir = fresh ? null : Path.Combine(instancesDir, sourceName!);
@@ -101,18 +185,18 @@ internal static class Program
         }
         Console.WriteLine();
 
-        // 3. New instance name (handles collisions).
+        // 2. New instance name (handles collisions).
         (string newName, NewInstanceAction action) = ChooseNewName(instancesDir);
         string newInstanceDir = Path.Combine(instancesDir, newName);
         bool resume = action == NewInstanceAction.Resume;
 
-        // 4. Warn if Prism or Minecraft is running.
+        // 3. Warn if Prism or Minecraft is running.
         if (!RunningCheck())
         {
             return 0; // user quit
         }
 
-        // 5. Ask about singleplayer worlds (upgrade only, and only if they exist).
+        // 4. Ask about singleplayer worlds (upgrade only, and only if they exist).
         bool copySaves = false;
         if (!fresh)
         {
@@ -132,7 +216,7 @@ internal static class Program
         Console.WriteLine($"Mod list loaded: {manifest.Count} mods to install.");
         Console.WriteLine();
 
-        // 6. Create the new instance (deleting first if the user chose that).
+        // 5. Create the new instance (deleting first if the user chose that).
         if (action == NewInstanceAction.DeleteAndRecreate)
         {
             Directory.Delete(newInstanceDir, recursive: true);
@@ -146,7 +230,7 @@ internal static class Program
 
         bool serverListAdded = WriteInstanceFiles(newInstanceDir, newMcDir, oldInstanceDir, newName, fresh);
 
-        // 7. Copy the user's files from the old instance (upgrade only).
+        // 6. Copy the user's files from the old instance (upgrade only).
         if (!fresh)
         {
             int copied = CopyUserFiles(oldInstanceDir!, newMcDir, copySaves);
@@ -161,7 +245,7 @@ internal static class Program
             Console.WriteLine("Fresh install: no built-in server list in this build; add the Pinkweiner server in Prism (Multiplayer -> Add Server).");
         }
 
-        // 8. Extract the built-in jars (custom mods + patched jars, not on Modrinth).
+        // 7. Extract the built-in jars (custom mods + patched jars, not on Modrinth).
         var embedded = GetEmbeddedMods();
         Console.WriteLine($"Extracting {embedded.Count} built-in mod(s)...");
         foreach (var (fileName, bytes) in embedded)
@@ -170,11 +254,21 @@ internal static class Program
             Console.WriteLine("  + " + fileName);
         }
 
-        // 9. Download the manifest mods.
+        // 8. Download the manifest mods.
         double totalMb = manifest.Sum(m => m.Size) / 1_000_000.0;
         Console.WriteLine($"Downloading {manifest.Count} mods ({totalMb:F1} MB)...");
         var (downloaded, skipped, failed) = await DownloadModsAsync(manifest, newModsDir);
         Console.WriteLine();
+
+        // 9. Record which jars this tool installed, so a later sync knows
+        // what it manages. Only jars actually present on disk are recorded.
+        var expected = manifest.Select(m => m.Filename)
+            .Concat(embedded.Select(e => e.FileName))
+            .ToList();
+        SaveStateFile(
+            Path.Combine(newMcDir, StateFileName),
+            packVersion: null,
+            BuildManagedSet(newModsDir, expected));
 
         // 10. Verify and summarize.
         int actualFiles = Directory.GetFiles(newModsDir).Length;
@@ -226,6 +320,419 @@ internal static class Program
         Resume,
     }
 
+    // ================= sync (one-click mod update) =================
+
+    private static async Task<int> RunSyncAsync(string instancesDir, string? manifestArg, string? manifestUrlArg)
+    {
+        Console.WriteLine("One-click mod sync: checks the Pinkweiner pack for new or changed");
+        Console.WriteLine("mods and installs them into your existing 26.3 instance. Mods you");
+        Console.WriteLine("added yourself are never touched or deleted.");
+        Console.WriteLine();
+
+        // 1. Pick the target instance.
+        string targetName = SelectSyncTarget(instancesDir);
+        string targetDir = Path.Combine(instancesDir, targetName);
+        string targetMcDir = Path.Combine(targetDir, "minecraft");
+        string targetModsDir = Path.Combine(targetMcDir, "mods");
+        Console.WriteLine();
+        Console.WriteLine($"Syncing instance: {targetName}");
+        Console.WriteLine();
+
+        // 2. Warn if Prism or Minecraft is running.
+        if (!RunningCheck())
+        {
+            return 0; // user quit
+        }
+
+        // 3. Load the pack manifest (local file for testing, else the repo).
+        PackManifest pack;
+        if (manifestArg is not null)
+        {
+            if (!File.Exists(manifestArg))
+            {
+                throw new InvalidOperationException($"Manifest file not found: {manifestArg}");
+            }
+            pack = ParsePackManifest(File.ReadAllText(manifestArg));
+            Console.WriteLine($"Pack manifest loaded from file: {manifestArg}");
+        }
+        else
+        {
+            string url = manifestUrlArg ?? SyncManifestUrl;
+            Console.WriteLine("Fetching the latest pack list...");
+            string json;
+            try
+            {
+                json = await Http.GetStringAsync(url);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "Could not download the pack list. Check your internet connection and try again. " +
+                    $"({ex.Message})");
+            }
+            pack = ParsePackManifest(json);
+        }
+        Console.WriteLine($"Pack version {pack.PackVersion}: {pack.Files.Count} mods " +
+                          $"(Minecraft {pack.Minecraft}, Fabric Loader {pack.Loader}).");
+        foreach (string note in pack.PlaceholderNotes)
+        {
+            Console.WriteLine("  (coming soon: " + note + ")");
+        }
+        Console.WriteLine();
+
+        // 4. Refuse to sync into an instance whose game/loader version does
+        // not match the pack. Nothing has changed yet at this point.
+        (string? mcVersion, string? loaderVersion) = ReadInstanceVersions(targetDir);
+        if (mcVersion is null || loaderVersion is null)
+        {
+            Console.WriteLine("ERROR: could not read this instance's Minecraft version");
+            Console.WriteLine("(mmc-pack.json is missing or unreadable). Sync refused --");
+            Console.WriteLine("nothing was changed. Pick your 26.3 instance, or run the");
+            Console.WriteLine("upgrade to set one up.");
+            return 1;
+        }
+        if (!mcVersion.Equals(pack.Minecraft, StringComparison.Ordinal) ||
+            !loaderVersion.Equals(pack.Loader, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"ERROR: this instance runs Minecraft {mcVersion} / Fabric Loader {loaderVersion},");
+            Console.WriteLine($"but the pack needs Minecraft {pack.Minecraft} / Fabric Loader {pack.Loader}.");
+            Console.WriteLine("Sync refused -- nothing was changed. Pick your 26.3 instance,");
+            Console.WriteLine("or run the upgrade to set one up.");
+            return 1;
+        }
+        Console.WriteLine($"Instance version matches: Minecraft {mcVersion}, Fabric Loader {loaderVersion}.");
+        Console.WriteLine();
+
+        Directory.CreateDirectory(targetModsDir);
+
+        // 5. Load the managed-jars state file. First sync ever: no state file
+        // yet, so the managed set starts empty and every pack jar found on
+        // disk is adopted (verified by hash below). A corrupt state file is
+        // treated as empty -- the safe direction, since removal only ever
+        // touches jars the state file proves this tool manages.
+        Dictionary<string, string> managed =
+            LoadStateFile(Path.Combine(targetMcDir, StateFileName)).Managed;
+
+        // 6. Compare the mods folder against the pack.
+        var manifestByName = pack.Files.ToDictionary(m => m.Filename, StringComparer.OrdinalIgnoreCase);
+        var toDownload = new List<ModEntry>();
+        var alreadyThere = new List<string>();
+        var existedBefore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (ModEntry mod in pack.Files)
+        {
+            string dest = Path.Combine(targetModsDir, mod.Filename);
+            if (File.Exists(dest))
+            {
+                existedBefore.Add(mod.Filename);
+                if (VerifyFile(dest, mod))
+                {
+                    alreadyThere.Add(mod.Filename);
+                    continue;
+                }
+            }
+            toDownload.Add(mod);
+        }
+
+        var toRemove = new List<string>();
+        foreach (string name in managed.Keys)
+        {
+            if (!manifestByName.ContainsKey(name) &&
+                File.Exists(Path.Combine(targetModsDir, name)))
+            {
+                toRemove.Add(name);
+            }
+        }
+        toRemove.Sort(StringComparer.OrdinalIgnoreCase);
+
+        var unmanaged = new List<string>();
+        foreach (string file in Directory.GetFiles(targetModsDir))
+        {
+            string name = Path.GetFileName(file);
+            if (!manifestByName.ContainsKey(name) && !managed.ContainsKey(name))
+            {
+                unmanaged.Add(name);
+            }
+        }
+        unmanaged.Sort(StringComparer.OrdinalIgnoreCase);
+
+        int toAdd = toDownload.Count(m => !existedBefore.Contains(m.Filename));
+        int toUpdate = toDownload.Count - toAdd;
+        Console.WriteLine($"Plan: {toAdd} new, {toUpdate} updated, {toRemove.Count} removed, " +
+                          $"{alreadyThere.Count} already up to date, {unmanaged.Count} of yours left alone.");
+        foreach (ModEntry mod in toDownload)
+        {
+            Console.WriteLine("  " + (existedBefore.Contains(mod.Filename) ? "~ " : "+ ") + mod.Filename);
+        }
+        foreach (string name in toRemove)
+        {
+            Console.WriteLine("  - " + name + " (no longer in the pack)");
+        }
+        if (toDownload.Count == 0 && toRemove.Count == 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Already up to date -- nothing to download or remove.");
+        }
+        Console.WriteLine();
+
+        // 7. Download new/changed mods. A failed download never touches the
+        // file already on disk (downloads go to a .download temp file and are
+        // only moved into place after size + hash verification).
+        var (downloaded, _, failed) = await DownloadModsAsync(toDownload, targetModsDir);
+        Console.WriteLine();
+
+        // 8. Remove managed jars that left the pack. Only jars recorded in
+        // the state file are ever deleted.
+        int removed = 0;
+        var removeFailed = new List<string>();
+        foreach (string name in toRemove)
+        {
+            try
+            {
+                File.Delete(Path.Combine(targetModsDir, name));
+                Console.WriteLine("  - removed " + name);
+                removed++;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  ! could not remove {name}: {ex.Message}");
+                removeFailed.Add(name);
+            }
+        }
+
+        // 9. Save the state file from ground truth: every pack jar actually
+        // on disk afterwards, with its real hash. A failed update keeps the
+        // old jar's hash, so the next sync retries it instead of forgetting it.
+        SaveStateFile(
+            Path.Combine(targetMcDir, StateFileName),
+            pack.PackVersion,
+            BuildManagedSet(targetModsDir, pack.Files.Select(m => m.Filename).ToList()));
+
+        // 10. Summary.
+        int added = toDownload.Count(m => !existedBefore.Contains(m.Filename) && !failed.Contains(m.Filename));
+        int updated = downloaded - added;
+        Console.WriteLine("========================================");
+        Console.WriteLine(failed.Count == 0 && removeFailed.Count == 0
+            ? "Sync complete!"
+            : "Sync finished with some problems.");
+        Console.WriteLine("========================================");
+        Console.WriteLine($"Added: {added}, updated: {updated}, removed: {removed}, " +
+                          $"already up to date: {alreadyThere.Count}.");
+        if (unmanaged.Count > 0)
+        {
+            Console.WriteLine($"Left alone ({unmanaged.Count} of your own mods -- never touched):");
+            foreach (string name in unmanaged.Take(10))
+            {
+                Console.WriteLine("  = " + name);
+            }
+            if (unmanaged.Count > 10)
+            {
+                Console.WriteLine($"  ... and {unmanaged.Count - 10} more.");
+            }
+        }
+        if (failed.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("WARNING: these mods failed to download (your old files, if any, were kept):");
+            foreach (string f in failed)
+            {
+                Console.WriteLine("  - " + f);
+            }
+            Console.WriteLine("Re-run the sync to retry them.");
+        }
+        if (removeFailed.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("WARNING: these old mods could not be removed:");
+            foreach (string f in removeFailed)
+            {
+                Console.WriteLine("  - " + f);
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("You can launch the instance in Prism now.");
+
+        return failed.Count > 0 || removeFailed.Count > 0 ? 1 : 0;
+    }
+
+    // Picks the instance to sync into. Defaults to 26.3NEW when present,
+    // else the first instance running Minecraft 26.3, else the first one.
+    private static string SelectSyncTarget(string instancesDir)
+    {
+        List<string> instances = ListInstances(instancesDir);
+        if (instances.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "No Prism instances were found. Run the upgrade first to set up a 26.3 instance.");
+        }
+
+        Console.WriteLine("Pick the instance to update:");
+        var versions = new Dictionary<string, (string? Mc, string? Loader)>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < instances.Count; i++)
+        {
+            var v = ReadInstanceVersions(Path.Combine(instancesDir, instances[i]));
+            versions[instances[i]] = v;
+            string hint = v.Minecraft is null ? "" : $" (Minecraft {v.Minecraft})";
+            Console.WriteLine($"  {i + 1}. {instances[i]}{hint}");
+        }
+
+        int defaultChoice = 0;
+        int idx263New = instances.FindIndex(n => n.Equals(DefaultNewName, StringComparison.OrdinalIgnoreCase));
+        if (idx263New >= 0)
+        {
+            defaultChoice = idx263New + 1;
+        }
+        else
+        {
+            int idx263 = instances.FindIndex(n =>
+                versions[n].Mc == "26.3");
+            defaultChoice = idx263 >= 0 ? idx263 + 1 : 1;
+        }
+
+        while (true)
+        {
+            Console.Write($"Enter a number [default {defaultChoice}]: ");
+            string? input = Console.ReadLine() ?? throw new QuitException();
+            input = input.Trim();
+            if (input.Length == 0)
+            {
+                return instances[defaultChoice - 1];
+            }
+            if (int.TryParse(input, out int n) && n >= 1 && n <= instances.Count)
+            {
+                return instances[n - 1];
+            }
+            Console.WriteLine($"Please enter a number from 1 to {instances.Count}.");
+        }
+    }
+
+    // Reads the Minecraft + Fabric Loader versions out of an instance's
+    // mmc-pack.json. Returns (null, null) when the file is missing or broken.
+    private static (string? Minecraft, string? Loader) ReadInstanceVersions(string instanceDir)
+    {
+        try
+        {
+            string path = Path.Combine(instanceDir, "mmc-pack.json");
+            if (!File.Exists(path))
+            {
+                return (null, null);
+            }
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            string? mc = null;
+            string? loader = null;
+            foreach (JsonElement el in doc.RootElement.GetProperty("components").EnumerateArray())
+            {
+                string? uid = el.TryGetProperty("uid", out JsonElement u) ? u.GetString() : null;
+                string? version = el.TryGetProperty("version", out JsonElement v) ? v.GetString() : null;
+                if (uid == "net.minecraft")
+                {
+                    mc = version;
+                }
+                else if (uid == "net.fabricmc.fabric-loader")
+                {
+                    loader = version;
+                }
+            }
+            return (mc, loader);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
+
+    // ----- managed-jars state file -----
+
+    // Returns the recorded pack version (null when the file is missing or has
+    // none) and filename -> sha1 of the jars this tool manages. A missing or
+    // corrupt file means "nothing managed yet" -- never an error.
+    private static (string? PackVersion, Dictionary<string, string> Managed) LoadStateFile(string path)
+    {
+        var managed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!File.Exists(path))
+        {
+            return (null, managed);
+        }
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            string? version = doc.RootElement.TryGetProperty("pack_version", out JsonElement v)
+                ? v.GetString()
+                : null;
+            if (doc.RootElement.TryGetProperty("managed", out JsonElement m))
+            {
+                foreach (JsonProperty prop in m.EnumerateObject())
+                {
+                    string? hash = prop.Value.GetString();
+                    if (hash is not null)
+                    {
+                        managed[prop.Name] = hash;
+                    }
+                }
+            }
+            return (version, managed);
+        }
+        catch
+        {
+            Console.WriteLine($"  (note: {StateFileName} was unreadable, starting fresh -- " +
+                              "your own mods are still safe)");
+            return (null, managed);
+        }
+    }
+
+    private static void SaveStateFile(string path, string? packVersion, Dictionary<string, string> managed)
+    {
+        try
+        {
+            using var ms = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = true }))
+            {
+                writer.WriteStartObject();
+                if (packVersion is not null)
+                {
+                    writer.WriteString("pack_version", packVersion);
+                }
+                writer.WriteStartObject("managed");
+                foreach (var kv in managed.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    writer.WriteString(kv.Key, kv.Value);
+                }
+                writer.WriteEndObject();
+                writer.WriteEndObject();
+            }
+            File.WriteAllBytes(path, ms.ToArray());
+        }
+        catch (Exception ex)
+        {
+            // A state file we cannot write only costs future removals, never
+            // correctness of the mods themselves. Say so and carry on.
+            Console.WriteLine($"  (note: could not save {StateFileName}: {ex.Message})");
+        }
+    }
+
+    // Ground truth for the state file: for each expected filename that is
+    // actually on disk, its real SHA1. Files that are missing (failed
+    // downloads) are left out.
+    private static Dictionary<string, string> BuildManagedSet(string modsDir, List<string> expectedFilenames)
+    {
+        var managed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string name in expectedFilenames)
+        {
+            string path = Path.Combine(modsDir, name);
+            if (File.Exists(path))
+            {
+                try
+                {
+                    managed[name] = Sha1Hex(path);
+                }
+                catch
+                {
+                    // Unreadable file: leave it out of the state file.
+                }
+            }
+        }
+        return managed;
+    }
+
     // ----- arguments -----
 
     private static string? GetArg(string[] args, string name)
@@ -239,6 +746,9 @@ internal static class Program
         }
         return null;
     }
+
+    private static bool HasFlag(string[] args, string name) =>
+        args.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     // ----- step 1: find Prism -----
 
@@ -528,8 +1038,9 @@ internal static class Program
         }
     }
 
-    // ----- manifest -----
+    // ----- manifests -----
 
+    // The built-in upgrade manifest (tool-manifest.json): {"mods": [...]}.
     private static List<ModEntry> LoadManifest(string? overridePath)
     {
         string json;
@@ -550,20 +1061,64 @@ internal static class Program
         using var doc = JsonDocument.Parse(json);
         foreach (JsonElement el in doc.RootElement.GetProperty("mods").EnumerateArray())
         {
-            string filename = el.GetProperty("filename").GetString()
-                ?? throw new InvalidOperationException("Manifest entry is missing a filename.");
-            string sha1 = el.GetProperty("sha1").GetString()
-                ?? throw new InvalidOperationException($"Manifest entry '{filename}' is missing a sha1.");
-            long size = el.GetProperty("size").GetInt64();
-            string url = el.GetProperty("url").GetString()
-                ?? throw new InvalidOperationException($"Manifest entry '{filename}' is missing a url.");
-            mods.Add(new ModEntry(filename, sha1, size, url));
+            mods.Add(ParseModEntry(el));
         }
         if (mods.Count == 0)
         {
             throw new InvalidOperationException("The mod manifest is empty.");
         }
         return mods;
+    }
+
+    // The online sync manifest (mods-manifest.json): pack_version, minecraft,
+    // loader, files[], placeholders[].
+    private static PackManifest ParsePackManifest(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+        string packVersion = root.TryGetProperty("pack_version", out JsonElement pv)
+            ? pv.GetString() ?? "?"
+            : "?";
+        string minecraft = root.GetProperty("minecraft").GetString()
+            ?? throw new InvalidOperationException("Pack manifest is missing 'minecraft'.");
+        string loader = root.GetProperty("loader").GetString()
+            ?? throw new InvalidOperationException("Pack manifest is missing 'loader'.");
+
+        var files = new List<ModEntry>();
+        foreach (JsonElement el in root.GetProperty("files").EnumerateArray())
+        {
+            files.Add(ParseModEntry(el));
+        }
+        if (files.Count == 0)
+        {
+            throw new InvalidOperationException("The pack manifest has no files.");
+        }
+
+        var notes = new List<string>();
+        if (root.TryGetProperty("placeholders", out JsonElement ph))
+        {
+            foreach (JsonElement el in ph.EnumerateArray())
+            {
+                string name = el.TryGetProperty("name", out JsonElement n)
+                    ? n.GetString() ?? "?"
+                    : "?";
+                notes.Add(name);
+            }
+        }
+        return new PackManifest(packVersion, minecraft, loader, files, notes);
+    }
+
+    private static ModEntry ParseModEntry(JsonElement el)
+    {
+        string filename = el.GetProperty("filename").GetString()
+            ?? throw new InvalidOperationException("Manifest entry is missing a filename.");
+        string sha1 = el.GetProperty("sha1").GetString()
+            ?? throw new InvalidOperationException($"Manifest entry '{filename}' is missing a sha1.");
+        long size = el.GetProperty("size").GetInt64();
+        string url = el.GetProperty("url").GetString()
+            ?? throw new InvalidOperationException($"Manifest entry '{filename}' is missing a url.");
+        string? sha512 = el.TryGetProperty("sha512", out JsonElement h) ? h.GetString() : null;
+        return new ModEntry(filename, sha1, size, url, sha512);
     }
 
     // ----- embedded resources -----
@@ -772,10 +1327,8 @@ internal static class Program
                 bool present = false;
                 bool ok = false;
 
-                // Resume support: skip files that already exist with a matching hash.
-                if (File.Exists(dest)
-                    && new FileInfo(dest).Length == mod.Size
-                    && Sha1Hex(dest).Equals(mod.Sha1, StringComparison.OrdinalIgnoreCase))
+                // Resume support: skip files that already exist and verify.
+                if (File.Exists(dest) && VerifyFile(dest, mod))
                 {
                     present = true;
                     Interlocked.Increment(ref skipped);
@@ -847,12 +1400,9 @@ internal static class Program
             {
                 await resp.Content.CopyToAsync(fs);
             }
-            if (new FileInfo(tmp).Length != mod.Size)
-            {
-                File.Delete(tmp);
-                return false;
-            }
-            if (!Sha1Hex(tmp).Equals(mod.Sha1, StringComparison.OrdinalIgnoreCase))
+            // Verify before installing: a bad download never replaces the
+            // file already on disk.
+            if (!VerifyFile(tmp, mod))
             {
                 File.Delete(tmp);
                 return false;
@@ -877,10 +1427,43 @@ internal static class Program
         }
     }
 
+    // Size + SHA1, plus SHA512 when the manifest entry carries one.
+    private static bool VerifyFile(string path, ModEntry mod)
+    {
+        try
+        {
+            if (new FileInfo(path).Length != mod.Size)
+            {
+                return false;
+            }
+            if (!Sha1Hex(path).Equals(mod.Sha1, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            if (mod.Sha512 is not null &&
+                !Sha512Hex(path).Equals(mod.Sha512, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static string Sha1Hex(string path)
     {
         using var sha1 = SHA1.Create();
         using var stream = File.OpenRead(path);
         return Convert.ToHexString(sha1.ComputeHash(stream)).ToLowerInvariant();
+    }
+
+    private static string Sha512Hex(string path)
+    {
+        using var sha512 = SHA512.Create();
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(sha512.ComputeHash(stream)).ToLowerInvariant();
     }
 }
