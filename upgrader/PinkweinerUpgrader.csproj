@@ -20,7 +20,7 @@
     <EmbeddedResource Include="../overrides/servers.dat" LogicalName="servers.dat" Condition="Exists('../overrides/servers.dat')" />
     <!-- Embedded: the 113-mod download manifest (overridable via a flag). -->
     <EmbeddedResource Include="../tool-manifest.json" LogicalName="tool-manifest.json" />
-    <!-- Embedded: the 10 jars not on Modrinth (8 custom mods + 2 patched jars). -->
+    <!-- Embedded: the 11 jars not on Modrinth (9 custom mods + 2 patched jars). -->
     <EmbeddedResource Include="../overrides/mods/*.jar" LogicalName="mods/%(Filename)%(Extension)" />
   </ItemGroup>
 

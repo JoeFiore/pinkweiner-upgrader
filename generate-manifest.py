@@ -8,17 +8,19 @@ Reads:
   - ../GoldenAppleTree-1.2.6-26.3-Fabric.jar (hashed locally)
 
 Writes:
-  - mods-manifest.json  (pack_version 1.1.0: 113 Modrinth + 10 overrides
-                         + Golden Apple Tree + a Golden Crops placeholder)
+  - mods-manifest.json  (pack_version 1.1.0: 113 Modrinth + 11 overrides
+                         + Golden Apple Tree; a Golden Crops placeholder is
+                         emitted only when no golden-crops jar is present)
   - v2-upload-list.txt  (files Joseph must attach to the v2 GitHub release)
 
 Override jars are fetched from the v2 release, so their URLs 404 until the
 release exists. That is safe for existing players: the syncer only downloads
 a file it does not already have with a matching hash.
 
-Golden Crops is still being built: it stays a placeholder entry (no url) until
-the jar exists. To fill it in, add the built jar's filename, size, sha1,
-sha512 and its v2 release URL, then re-run this script (or edit the JSON).
+Golden Crops is an override jar: drop the built jar in overrides/mods/ and
+re-run this script — it gets hashed and listed with a v2 release URL like
+the other overrides. When no golden-crops jar is present, a placeholder
+entry is emitted instead.
 """
 import hashlib
 import json
@@ -89,19 +91,20 @@ def main():
 
     files.sort(key=lambda f: f["filename"].lower())
 
+    has_golden_crops = any(f["filename"].startswith("golden-crops-") for f in files)
+    placeholders = [] if has_golden_crops else [
+        {
+            "name": "Golden Crops",
+            "note": "Custom Pinkweiner mod, still being built. When the jar is ready, "
+                    "drop it in overrides/mods/ and re-run this script."
+        }
+    ]
     manifest = {
         "pack_version": PACK_VERSION,
         "minecraft": MINECRAFT,
         "loader": LOADER,
         "files": files,
-        "placeholders": [
-            {
-                "name": "Golden Crops",
-                "note": "Custom Pinkweiner mod, still being built. When the jar is ready, "
-                        "add a files[] entry with its filename, size, sha1, sha512 and "
-                        "v2 release URL, then remove this placeholder."
-            }
-        ],
+        "placeholders": placeholders,
     }
     with open(os.path.join(HERE, "mods-manifest.json"), "w") as fh:
         json.dump(manifest, fh, indent=1)
@@ -113,12 +116,9 @@ def main():
         fh.write("Override jars (from mc263-upgrade/overrides/mods/):\n")
         for name in uploads:
             fh.write(f"  {name}\n")
-        fh.write("\nStill to come (do NOT create the release until these exist):\n")
-        fh.write("  golden-crops-1.0.0.jar  (exact filename TBD — the Golden Crops\n")
-        fh.write("                           builder agent will confirm it)\n")
-        fh.write("  Pinkweiner.Upgrader.for.Windows.exe  (built from the v2 source)\n")
-        fh.write("  Pinkweiner.Upgrader.for.Mac.zip.with.launcher.zip\n")
-        fh.write("                           (v2 Mac binary + Pinkweiner-Upgrader.command)\n")
+        fh.write("\nUpgrader binaries (built from the v2 source with `dotnet publish`):\n")
+        fh.write("  Pinkweiner-Upgrader-Windows.exe\n")
+        fh.write("  Pinkweiner-Upgrader-macOS.zip  (folder + Pinkweiner-Upgrader.command)\n")
 
     print(f"mods-manifest.json: {len(files)} files (pack {PACK_VERSION})")
     print(f"v2-upload-list.txt: {len(uploads)} override jars listed")

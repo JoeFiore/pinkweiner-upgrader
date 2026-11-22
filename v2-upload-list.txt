@@ -6,6 +6,7 @@ Override jars (from mc263-upgrade/overrides/mods/):
   concretepalette-1.0.0-26.3.jar
   daybreak-1.0.2-26.3.jar
   fabric-1.0.0-26.3-patched.jar
+  golden-crops-1.0.1.jar
   logstripper-1.0.5-26.3.jar
   modlink-1.0.5-26.3.jar
   pulseai-1.0-26.3.jar
@@ -13,9 +14,6 @@ Override jars (from mc263-upgrade/overrides/mods/):
   tunebridge-fabric-1.0.0-26.3.jar
   waypointsync-1.0.4-26.3.jar
 
-Still to come (do NOT create the release until these exist):
-  golden-crops-1.0.0.jar  (exact filename TBD — the Golden Crops
-                           builder agent will confirm it)
-  Pinkweiner.Upgrader.for.Windows.exe  (built from the v2 source)
-  Pinkweiner.Upgrader.for.Mac.zip.with.launcher.zip
-                           (v2 Mac binary + Pinkweiner-Upgrader.command)
+Upgrader binaries (built from the v2 source with `dotnet publish`):
+  Pinkweiner-Upgrader-Windows.exe
+  Pinkweiner-Upgrader-macOS.zip  (folder + Pinkweiner-Upgrader.command)

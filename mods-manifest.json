@@ -375,6 +375,13 @@
    "url": "https://cdn.modrinth.com/data/8BmcQJ2H/versions/kSxHvs99/geckolib-fabric-26.3-5.5.7.jar"
   },
   {
+   "filename": "golden-crops-1.0.1.jar",
+   "size": 52501,
+   "sha1": "6016c7ff349b0b07465db8108cae84d4a344616f",
+   "sha512": "bb1ca4ace2cb89f9df974a41bcf6098b2c817b8a832a492ac8d47bc1faf9ac16ba74a4aab542d80899d6bc58d2a0a275f4543f5519dbf4cf66c5d28ce52cb23a",
+   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/golden-crops-1.0.1.jar"
+  },
+  {
    "filename": "GoldenAppleTree-1.2.6-26.3-Fabric.jar",
    "size": 429587,
    "sha1": "fa148117f9f67c93d6f101c91c9ae62bd268f955",
@@ -872,10 +879,5 @@
    "url": "https://cdn.modrinth.com/data/uhi0s5Uu/versions/gNfPe0PV/zundamod-1.1.1-26.2-release.jar"
   }
  ],
- "placeholders": [
-  {
-   "name": "Golden Crops",
-   "note": "Custom Pinkweiner mod, still being built. When the jar is ready, add a files[] entry with its filename, size, sha1, sha512 and v2 release URL, then remove this placeholder."
-  }
- ]
+ "placeholders": []
 }
