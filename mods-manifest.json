@@ -197,7 +197,7 @@
    "size": 16206,
    "sha1": "4bf18b17766481eea7e72ea0598b82c00ac7d2e1",
    "sha512": "3cbf87312ae7488b86865bf69d045fbe9edbb08776ec7c7914b493fe5079e261a929abb37a939ae201cc477f51eb915673e556cf11944ec5b17b367986684193",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/concretepalette-1.0.0-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/concretepalette-1.0.0-26.3.jar"
   },
   {
    "filename": "coolrain-1.4.0-26.3.jar",
@@ -232,7 +232,7 @@
    "size": 90818,
    "sha1": "20068b24fb2e45bb3b497a229f5fc5af9bc4ea13",
    "sha512": "4b6fc92bb529c598049e50e7fff6fec5c3dbf869838b1f300c1fe757fc49d1f4c7d996b0215ec081a9730ccaf69e80bf9e758b522a3bfa35219c121be69b5506",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/daybreak-1.0.2-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/daybreak-1.0.2-26.3.jar"
   },
   {
    "filename": "diegesis-fabric-26.3-1.0.0-beta.13.jar",
@@ -277,6 +277,13 @@
    "url": "https://cdn.modrinth.com/data/DYtfQEYj/versions/R8eAP63A/effortlessbuilding-fabric-26.3-4.3.jar"
   },
   {
+   "filename": "elytra-chestplate-1.0.0.jar",
+   "size": 14316,
+   "sha1": "2626f25842ee4d7121b2423b65d7ee2d7f8b021c",
+   "sha512": "ae36859a6df8ed843bd3b4193d376d3643681546d0fd36e7ce955233b7037c6b7cf4d8694d17422517d4101ab8e8ca30324f3a63f45f4513750f89ba495ca568",
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/elytra-chestplate-1.0.0.jar"
+  },
+  {
    "filename": "entityculling-fabric-1.12.1-mc26.3.jar",
    "size": 1522184,
    "sha1": "de9005580599906b55ff241bdf8cb27da999939a",
@@ -295,7 +302,7 @@
    "size": 38974,
    "sha1": "4b3ecf57dd1c9cd4379b83955d4e9483b2b6527d",
    "sha512": "ebb2afb2c3e83afd0b79b5471cc714dfc3215041203f4e7e90c191d06e2395fdd41420bc1900ffd3c171611adf680aa2a367a15795f716e3f0a614c2a11070e0",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/fabric-1.0.0-26.3-patched.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/fabric-1.0.0-26.3-patched.jar"
   },
   {
    "filename": "fabric-api-0.166.2+26.3.jar",
@@ -379,7 +386,7 @@
    "size": 52501,
    "sha1": "6016c7ff349b0b07465db8108cae84d4a344616f",
    "sha512": "bb1ca4ace2cb89f9df974a41bcf6098b2c817b8a832a492ac8d47bc1faf9ac16ba74a4aab542d80899d6bc58d2a0a275f4543f5519dbf4cf66c5d28ce52cb23a",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/golden-crops-1.0.1.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/golden-crops-1.0.1.jar"
   },
   {
    "filename": "GoldenAppleTree-1.2.6-26.3-Fabric.jar",
@@ -505,7 +512,7 @@
    "size": 22138,
    "sha1": "f6455c909e0deee80f208f349bb55a078ec0aeab",
    "sha512": "0fff8fbdd20307cb992828c9978dddd1a5a2b64e73d56832dae6bd497922c6a47dd587743779a9147a10ec7a2f24eb04fc45865e40038cb713d019732e89b943",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/logstripper-1.0.5-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/logstripper-1.0.5-26.3.jar"
   },
   {
    "filename": "malilib-fabric-26.3-0.30.2.jar",
@@ -526,7 +533,7 @@
    "size": 20064,
    "sha1": "08690e8a3a3e181cb02593ee0467534308c1e477",
    "sha512": "7eae4e078b7b792e9c8473c27845d6dfe980cb16a74a225dcd4bcc6de22e9e72096ac561dd5f3a850b70ede92fed65c83cac0b27f5fdf780683a91445405c9f9",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/modlink-1.0.5-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/modlink-1.0.5-26.3.jar"
   },
   {
    "filename": "modmenu-21.0.1.jar",
@@ -638,7 +645,7 @@
    "size": 1117327,
    "sha1": "f5b85fc9c3ec7596124c97e0b5818ba1a675f6d8",
    "sha512": "5f158eff45aada82f9465b626306aff10bc28d872955cade2e449d416a74e8df20ebaf461a85fee80fd9f69d1df072223b9cecc797adad7b4fb963037b249970",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/pulseai-1.0-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/pulseai-1.0-26.3.jar"
   },
   {
    "filename": "punchy-3.2b-fabric-26.3.jar",
@@ -708,7 +715,7 @@
    "size": 386436,
    "sha1": "111f13dbd4770043ef8e23981a371d58d8760841",
    "sha512": "3a06f0b359e4c6a5e256a6fe31016c929560e4213d9f6fe2622a575da12343aaae0a1a2c34ae1a00fc7c7cad16f059e5b5026c37fffd4ddd474e544e7eef0c29",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/ShoulderSurfing-Fabric-26.3-5.3.1-patched2.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/ShoulderSurfing-Fabric-26.3-5.3.1-patched2.jar"
   },
   {
    "filename": "simple_music_control-fabric-1.5.6+26.3.jar",
@@ -764,7 +771,7 @@
    "size": 8605,
    "sha1": "3d32865b74b1ef39fbef4c6a7eb2871041fafcf2",
    "sha512": "3898e189a767917b6e94f7772fb27fbf418828b94e878273658cc3b0916835a62a3f46cbb9d3dc54eec9fb03f8bb6ad36148e7407dcdf1a924788b3c64c3370f",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/speedupgrade-1.0.3-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/speedupgrade-1.0.3-26.3.jar"
   },
   {
    "filename": "statuseffecttimer-2.0.0+26.3.jar",
@@ -813,7 +820,7 @@
    "size": 2221497,
    "sha1": "183769bc16b5f69d58202c5e4b51fcf249fbfa4c",
    "sha512": "540cb82d68115374febd39fdfb7dc858bead9a01634c7f67d9ea036a9064f05cf878005d9db9e1faf0bca17b5e583e0a320415c326f3c2b3c86cd5d8166e3f1e",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/tunebridge-fabric-1.0.0-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/tunebridge-fabric-1.0.0-26.3.jar"
   },
   {
    "filename": "tweakeroo-fabric-26.3-0.30.1.jar",
@@ -841,7 +848,7 @@
    "size": 120469,
    "sha1": "a33e13b8cc6fd027db0c96619f1ff3bb6b108168",
    "sha512": "d74276ae1c691c06a5a9687e13adbef15fd2f65e5fef83e85efe340890f07308546fbba38823a7adc9466c182def00cc7affed9d25ca107f9338a806b02db2b7",
-   "url": "https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/v2/waypointsync-1.0.4-26.3.jar"
+   "url": "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods/waypointsync-1.0.4-26.3.jar"
   },
   {
    "filename": "xaerominimap-fabric-26.3-26.6.2.jar",

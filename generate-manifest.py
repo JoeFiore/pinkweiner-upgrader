@@ -11,11 +11,12 @@ Writes:
   - mods-manifest.json  (pack_version 1.1.0: 113 Modrinth + 11 overrides
                          + Golden Apple Tree; a Golden Crops placeholder is
                          emitted only when no golden-crops jar is present)
-  - v2-upload-list.txt  (files Joseph must attach to the v2 GitHub release)
+  - v2-upload-list.txt  (what goes on the v2 GitHub release; overrides live in the repo)
 
-Override jars are fetched from the v2 release, so their URLs 404 until the
-release exists. That is safe for existing players: the syncer only downloads
-a file it does not already have with a matching hash.
+Override jars live in the repo under overrides/mods/ and are fetched from
+their raw.githubusercontent.com URLs, so a pack update never needs a
+release edit. Upload replacements via the GitHub web UI — the connector
+cannot push binary files.
 
 Golden Crops is an override jar: drop the built jar in overrides/mods/ and
 re-run this script — it gets hashed and listed with a v2 release URL like
@@ -31,8 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PACK_VERSION = "1.1.0"
 MINECRAFT = "26.3"
 LOADER = "0.20.1"
-RELEASE_TAG = "v2"
-RELEASE_BASE = f"https://github.com/JoeFiore/pinkweiner-upgrader/releases/download/{RELEASE_TAG}"
+OVERRIDES_BASE = "https://raw.githubusercontent.com/JoeFiore/pinkweiner-upgrader/main/overrides/mods"
 GAT_JAR = os.path.join(os.path.dirname(HERE), "GoldenAppleTree-1.2.6-26.3-Fabric.jar")
 GAT_URL = "https://cdn.modrinth.com/data/TevJ7APg/versions/kzZH4tTe/GoldenAppleTree-1.2.6-26.3-Fabric.jar"
 
@@ -75,7 +75,7 @@ def main():
             "size": size,
             "sha1": sha1,
             "sha512": sha512,
-            "url": f"{RELEASE_BASE}/{name}",
+            "url": f"{OVERRIDES_BASE}/{name}",
         })
         uploads.append(name)
 
@@ -113,12 +113,16 @@ def main():
     with open(os.path.join(HERE, "v2-upload-list.txt"), "w") as fh:
         fh.write("Files to attach to the v2 release of JoeFiore/pinkweiner-upgrader\n")
         fh.write("=================================================================\n\n")
-        fh.write("Override jars (from mc263-upgrade/overrides/mods/):\n")
-        for name in uploads:
-            fh.write(f"  {name}\n")
-        fh.write("\nUpgrader binaries (built from the v2 source with `dotnet publish`):\n")
         fh.write("  Pinkweiner-Upgrader-Windows.exe\n")
         fh.write("  Pinkweiner-Upgrader-macOS.zip  (folder + Pinkweiner-Upgrader.command)\n")
+        fh.write("\nThe override jars are NOT release assets — they live in the repo\n")
+        fh.write("under overrides/mods/, and the manifest points at their\n")
+        fh.write("raw.githubusercontent.com URLs. Upload replacements via the GitHub\n")
+        fh.write("web UI (the connector cannot push binary files). Jars in the repo:\n")
+        for name in uploads:
+            fh.write(f"  {name}\n")
+        fh.write("\nThe .mrpack will also live in the repo (not the release) once the\n")
+        fh.write("1.1.0 rebuild is done.\n")
 
     print(f"mods-manifest.json: {len(files)} files (pack {PACK_VERSION})")
     print(f"v2-upload-list.txt: {len(uploads)} override jars listed")

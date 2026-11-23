@@ -1,10 +1,17 @@
 Files to attach to the v2 release of JoeFiore/pinkweiner-upgrader
 =================================================================
 
-Override jars (from mc263-upgrade/overrides/mods/):
+  Pinkweiner-Upgrader-Windows.exe
+  Pinkweiner-Upgrader-macOS.zip  (folder + Pinkweiner-Upgrader.command)
+
+The override jars are NOT release assets — they live in the repo
+under overrides/mods/, and the manifest points at their
+raw.githubusercontent.com URLs. Upload replacements via the GitHub
+web UI (the connector cannot push binary files). Jars in the repo:
   ShoulderSurfing-Fabric-26.3-5.3.1-patched2.jar
   concretepalette-1.0.0-26.3.jar
   daybreak-1.0.2-26.3.jar
+  elytra-chestplate-1.0.0.jar
   fabric-1.0.0-26.3-patched.jar
   golden-crops-1.0.1.jar
   logstripper-1.0.5-26.3.jar
@@ -14,6 +21,5 @@ Override jars (from mc263-upgrade/overrides/mods/):
   tunebridge-fabric-1.0.0-26.3.jar
   waypointsync-1.0.4-26.3.jar
 
-Upgrader binaries (built from the v2 source with `dotnet publish`):
-  Pinkweiner-Upgrader-Windows.exe
-  Pinkweiner-Upgrader-macOS.zip  (folder + Pinkweiner-Upgrader.command)
+The .mrpack will also live in the repo (not the release) once the
+1.1.0 rebuild is done.
